@@ -1,48 +1,79 @@
-import 'dotenv/config';
+import express from 'express';
+import dotenv from 'dotenv';
 import axios from 'axios';
+import { apiKeys } from './keys.js';
+
+dotenv.config();
+const app = express();
+app.use(express.json());
+
+// Auth middleware using API keys
+app.use((req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "Missing or malformed authorization header" });
+  }
+
+  const token = authHeader.split(" ")[1];
+  const customerId = Object.keys(apiKeys).find(id => apiKeys[id] === token);
+
+  if (!customerId) {
+    return res.status(401).json({ error: "Invalid API key" });
+  }
+
+  req.customerId = customerId;
+  next();
+});
 
 const shopify = axios.create({
-  baseURL: `https://stickershop1.myshopify.com/admin/api/2023-10`,
+  baseURL: `https://${process.env.SHOPIFY_STORE_DOMAIN}/admin/api/2023-10`,
   headers: {
     'X-Shopify-Access-Token': process.env.SHOPIFY_API_KEY,
     'Content-Type': 'application/json',
   },
 });
 
-async function createCustomOrder() {
+app.post('/create-order', async (req, res) => {
   try {
-    const draftOrderResponse = await shopify.post('/draft_orders.json', {
+    const { title, price, quantity, customer } = req.body;
+
+    if (!title || !price || !quantity || !customer?.email) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const draftRes = await shopify.post('/draft_orders.json', {
       draft_order: {
         line_items: [
           {
-            title: "Custom API Product",
-            price: "24.99",
-            quantity: 1
+            title,
+            price: price.toFixed(2),
+            quantity
           }
         ],
-        customer: {
-          email: "customer@example.com",
-          first_name: "John",
-          last_name: "Doe"
-        },
-        note: "Created via API with payment pending",
+        customer,
+        note: `API-generated order from ${req.customerId}`,
         use_customer_default_address: true
       }
     });
 
-    const draftOrder = draftOrderResponse.data.draft_order;
-    console.log(`✅ Draft order created with ID: ${draftOrder.id}`);
+    const draftOrder = draftRes.data.draft_order;
 
-    const completeResponse = await shopify.post(`/draft_orders/${draftOrder.id}/complete.json`, {
+    const completeRes = await shopify.post(`/draft_orders/${draftOrder.id}/complete.json`, {
       payment_pending: true
     });
 
-    const completedOrder = completeResponse.data;
-    console.log(`✅ Draft order completed as real order with ID: ${completedOrder.order.id}`);
-    console.log(`🧾 View in Shopify Admin: https://${process.env.SHOPIFY_STORE_DOMAIN}/admin/orders/${completedOrder.order.id}`);
+    return res.status(200).json({
+      message: 'Order created and marked as payment pending',
+      orderId: completeRes.data.order.id,
+      shopifyUrl: `https://${process.env.SHOPIFY_STORE_DOMAIN}/admin/orders/${completeRes.data.order.id}`
+    });
   } catch (error) {
-    console.error('❌ Error creating or completing order:', error.response?.data || error.message);
+    console.error('❌ Error:', error.response?.data || error.message);
+    return res.status(500).json({ error: 'Order creation failed' });
   }
-}
+});
 
-createCustomOrder();
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`🚀 API is live on port ${PORT}`);
+});
