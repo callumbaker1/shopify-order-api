@@ -43,11 +43,22 @@ app.post('/create-order', async (req, res) => {
     }
 
     const draftRes = await shopify.post('/draft_orders.json', {
+
+      console.log("Sending draft order:", {
+        draft_order: {
+          line_items: [{ title, price, quantity }],
+          customer,
+          note: `API-generated order from ${req.customerId}`,
+          use_customer_default_address: true
+        }
+      });
+
+      
       draft_order: {
         line_items: [
           {
-            title,
-            price: price.toString(),
+            title: "Custom Sticker Job",
+            price: "44.99", // ✅ Must be string
             quantity
           }
         ],
