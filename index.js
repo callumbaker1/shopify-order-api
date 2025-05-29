@@ -35,8 +35,7 @@ const shopify = axios.create({
 });
 
 app.post('/create-order', async (req, res) => {
-
-  const { title, price, quantity, customer, properties = [] } = req.body;
+  const { title, price, customer, properties, note } = req.body;
 
   try {
     const response = await shopify.post('/orders.json', {
@@ -45,17 +44,31 @@ app.post('/create-order', async (req, res) => {
           {
             title,
             price,
-            quantity,
+            quantity: 1,
             properties
           }
         ],
         customer,
         financial_status: "pending",
-        note: `Created by ${req.customerId} via API`
+        note: note
       }
     });
 
-    return res.status(200).json({ success: true, order: response.data.order });
+    const order = response.data.order;
+
+    // ✅ Only return key details
+    return res.status(200).json({
+      success: true,
+      order: {
+        id: order.id,
+        name: order.name,
+        email: order.email,
+        status: order.financial_status,
+        created_at: order.created_at,
+        total_price: order.total_price,
+        order_status_url: order.order_status_url // can be shown to customer
+      }
+    });
   } catch (error) {
     console.error('❌ Shopify order error:', error.response?.data || error.message);
     return res.status(500).json({ error: error.response?.data || 'Order creation failed' });
