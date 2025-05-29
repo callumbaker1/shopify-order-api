@@ -30,6 +30,7 @@ const shopify = axios.create({
   headers: {
     'X-Shopify-Access-Token': process.env.SHOPIFY_ACCESS_TOKEN,
     'Content-Type': 'application/json',
+    'Accept': 'application/json'
   },
 });
 
