@@ -1,7 +1,6 @@
-require('dotenv').config();
-const axios = require('axios');
+import 'dotenv/config';
+import axios from 'axios';
 
-// Setup Shopify API instance
 const shopify = axios.create({
   baseURL: `https://${process.env.SHOPIFY_STORE_DOMAIN}/admin/api/2023-10`,
   headers: {
@@ -10,21 +9,19 @@ const shopify = axios.create({
   },
 });
 
-// MAIN FUNCTION
 async function createCustomOrder() {
   try {
-    // === Step 1: Create draft order ===
     const draftOrderResponse = await shopify.post('/draft_orders.json', {
       draft_order: {
         line_items: [
           {
-            title: "Custom API Product",  // You can change this dynamically
-            price: "24.99",               // Custom price
+            title: "Custom API Product",
+            price: "24.99",
             quantity: 1
           }
         ],
         customer: {
-          email: "customer@example.com",  // Change or set dynamically
+          email: "customer@example.com",
           first_name: "John",
           last_name: "Doe"
         },
@@ -36,7 +33,6 @@ async function createCustomOrder() {
     const draftOrder = draftOrderResponse.data.draft_order;
     console.log(`✅ Draft order created with ID: ${draftOrder.id}`);
 
-    // === Step 2: Complete the draft (mark as payment pending) ===
     const completeResponse = await shopify.post(`/draft_orders/${draftOrder.id}/complete.json`, {
       payment_pending: true
     });
@@ -44,7 +40,6 @@ async function createCustomOrder() {
     const completedOrder = completeResponse.data;
     console.log(`✅ Draft order completed as real order with ID: ${completedOrder.order.id}`);
     console.log(`🧾 View in Shopify Admin: https://${process.env.SHOPIFY_STORE_DOMAIN}/admin/orders/${completedOrder.order.id}`);
-
   } catch (error) {
     console.error('❌ Error creating or completing order:', error.response?.data || error.message);
   }
