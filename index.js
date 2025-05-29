@@ -35,45 +35,35 @@ const shopify = axios.create({
 });
 
 app.post('/create-order', async (req, res) => {
+  const authHeader = req.headers.authorization || '';
+  const token = authHeader.replace('Bearer ', '');
+
+  if (!apiKeys[token]) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const { title, price, quantity, customer } = req.body;
+
   try {
-    const { title, price, quantity, customer } = req.body;
-
-    if (!title || !price || !quantity || !customer?.email) {
-      return res.status(400).json({ error: 'Missing required fields' });
-    }
-
-    const draftRes = await shopify.post('/draft_orders.json', {
-
-      
-      draft_order: {
+    const response = await shopify.post('/orders.json', {
+      order: {
         line_items: [
           {
-            title: "Custom Sticker Job",
-            price: "44.99", // ✅ Must be string
+            title,
+            price,
             quantity
           }
         ],
         customer,
-        note: `API-generated order from ${req.customerId}`,
-        use_customer_default_address: true
+        financial_status: "pending",
+        note: "Created via API with payment pending"
       }
     });
-    
 
-    const draftOrder = draftRes.data.draft_order;
-
-    const completeRes = await shopify.post(`/draft_orders/${draftOrder.id}/complete.json`, {
-      payment_pending: true
-    });
-
-    return res.status(200).json({
-      message: 'Order created and marked as payment pending',
-      orderId: completeRes.data.order.id,
-      shopifyUrl: `https://${process.env.SHOPIFY_STORE_DOMAIN}/admin/orders/${completeRes.data.order.id}`
-    });
+    return res.status(200).json({ success: true, order: response.data.order });
   } catch (error) {
-    console.error('❌ Error creating or completing order:', error.response?.data || error.message);
-    res.status(500).json({ error: error.response?.data || error.message });
+    console.error('❌ Shopify order error:', error.response?.data || error.message);
+    return res.status(500).json({ error: error.response?.data || 'Order creation failed' });
   }
 });
 
