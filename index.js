@@ -68,8 +68,8 @@ app.post('/create-order', async (req, res) => {
       shopifyUrl: `https://${process.env.SHOPIFY_STORE_DOMAIN}/admin/orders/${completeRes.data.order.id}`
     });
   } catch (error) {
-    console.error('❌ Error:', error.response?.data || error.message);
-    return res.status(500).json({ error: 'Order creation failed' });
+    console.error('❌ Error creating or completing order:', error.response?.data || error.message);
+    res.status(500).json({ error: error.response?.data || error.message });
   }
 });
 
