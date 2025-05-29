@@ -2,7 +2,7 @@ import 'dotenv/config';
 import axios from 'axios';
 
 const shopify = axios.create({
-  baseURL: `https://stickershop1.myshopify/admin/api/2023-10`,
+  baseURL: `https://stickershop1.myshopify.com/admin/api/2023-10`,
   headers: {
     'X-Shopify-Access-Token': process.env.SHOPIFY_API_KEY,
     'Content-Type': 'application/json',
