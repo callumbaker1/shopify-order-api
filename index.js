@@ -35,13 +35,6 @@ const shopify = axios.create({
 });
 
 app.post('/create-order', async (req, res) => {
-  const authHeader = req.headers.authorization || '';
-  const token = authHeader.replace('Bearer ', '');
-
-  if (!apiKeys[token]) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-
   const { title, price, quantity, customer } = req.body;
 
   try {
@@ -56,7 +49,7 @@ app.post('/create-order', async (req, res) => {
         ],
         customer,
         financial_status: "pending",
-        note: "Created via API with payment pending"
+        note: `Created by ${req.customerId} via API`
       }
     });
 
