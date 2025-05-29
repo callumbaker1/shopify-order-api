@@ -35,7 +35,7 @@ const shopify = axios.create({
 });
 
 app.post('/create-order', async (req, res) => {
-  const { title, price, quantity, customer } = req.body;
+  const { title, price, quantity, customer, properties } = req.body;
 
   try {
     const response = await shopify.post('/orders.json', {
