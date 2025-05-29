@@ -46,7 +46,7 @@ app.post('/create-order', async (req, res) => {
         line_items: [
           {
             title,
-            price: price.toFixed(2),
+            price: price.toString(),
             quantity
           }
         ],
