@@ -1,7 +1,7 @@
 require('dotenv').config();
 const axios = require('axios');
 
-// Configure your Shopify API connection
+// Setup Shopify API instance
 const shopify = axios.create({
   baseURL: `https://${process.env.SHOPIFY_STORE_DOMAIN}/admin/api/2023-10`,
   headers: {
@@ -10,38 +10,44 @@ const shopify = axios.create({
   },
 });
 
-async function createAndCompleteDraftOrder() {
+// MAIN FUNCTION
+async function createCustomOrder() {
   try {
-    // Step 1: Create the draft order
-    const draftRes = await shopify.post('/draft_orders.json', {
+    // === Step 1: Create draft order ===
+    const draftOrderResponse = await shopify.post('/draft_orders.json', {
       draft_order: {
         line_items: [
           {
-            title: "Custom API Product",
-            price: "12.34", // Replace with dynamic value if needed
+            title: "Custom API Product",  // You can change this dynamically
+            price: "24.99",               // Custom price
             quantity: 1
           }
         ],
         customer: {
-          email: "customer@example.com" // Replace with real email if needed
+          email: "customer@example.com",  // Change or set dynamically
+          first_name: "John",
+          last_name: "Doe"
         },
-        note: "API-generated order"
+        note: "Created via API with payment pending",
+        use_customer_default_address: true
       }
     });
 
-    const draftOrder = draftRes.data.draft_order;
+    const draftOrder = draftOrderResponse.data.draft_order;
+    console.log(`✅ Draft order created with ID: ${draftOrder.id}`);
 
-    // Step 2: Complete draft as 'payment pending'
-    const completeRes = await shopify.post(`/draft_orders/${draftOrder.id}/complete.json`, {
+    // === Step 2: Complete the draft (mark as payment pending) ===
+    const completeResponse = await shopify.post(`/draft_orders/${draftOrder.id}/complete.json`, {
       payment_pending: true
     });
 
-    console.log('✅ Order created and marked as payment pending:');
-    console.log(completeRes.data);
+    const completedOrder = completeResponse.data;
+    console.log(`✅ Draft order completed as real order with ID: ${completedOrder.order.id}`);
+    console.log(`🧾 View in Shopify Admin: https://${process.env.SHOPIFY_STORE_DOMAIN}/admin/orders/${completedOrder.order.id}`);
+
   } catch (error) {
-    console.error('❌ Error:', error.response?.data || error.message);
+    console.error('❌ Error creating or completing order:', error.response?.data || error.message);
   }
 }
 
-// Run the function
-createAndCompleteDraftOrder();
+createCustomOrder();
