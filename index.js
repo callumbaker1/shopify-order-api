@@ -44,7 +44,8 @@ app.post('/create-order', async (req, res) => {
           {
             title,
             price,
-            quantity
+            quantity,
+            properties: properties || []
           }
         ],
         customer,
