@@ -1,51 +1,47 @@
-import express from "express";
-import axios from "axios";
-import dotenv from "dotenv";
-dotenv.config();
+require('dotenv').config();
+const axios = require('axios');
 
-const app = express();
-app.use(express.json());
+// Configure your Shopify API connection
+const shopify = axios.create({
+  baseURL: `https://${process.env.SHOPIFY_STORE_DOMAIN}/admin/api/2023-10`,
+  headers: {
+    'X-Shopify-Access-Token': process.env.SHOPIFY_API_KEY,
+    'Content-Type': 'application/json',
+  },
+});
 
-app.post("/create-order", async (req, res) => {
-  const authHeader = req.headers.authorization;
-
-  if (authHeader !== `Bearer ${process.env.API_SECRET}`) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
-
-  const orderData = {
-    order: {
-      line_items: req.body.line_items,
-      customer: req.body.customer,
-      shipping_address: req.body.shipping_address,
-      billing_address: req.body.billing_address,
-      financial_status: "pending"
-    }
-  };
-
+async function createAndCompleteDraftOrder() {
   try {
-    const response = await axios.post(
-      `https://${process.env.SHOPIFY_STORE}/admin/api/2024-01/orders.json`,
-      orderData,
-      {
-        headers: {
-          "X-Shopify-Access-Token": process.env.SHOPIFY_API_KEY,
-          "Content-Type": "application/json"
-        }
+    // Step 1: Create the draft order
+    const draftRes = await shopify.post('/draft_orders.json', {
+      draft_order: {
+        line_items: [
+          {
+            title: "Custom API Product",
+            price: "12.34", // Replace with dynamic value if needed
+            quantity: 1
+          }
+        ],
+        customer: {
+          email: "customer@example.com" // Replace with real email if needed
+        },
+        note: "API-generated order"
       }
-    );
+    });
 
-    res.status(200).json({ success: true, order: response.data.order });
-  } catch (err) {
-    res.status(500).json({ error: err.response?.data || err.message });
+    const draftOrder = draftRes.data.draft_order;
+
+    // Step 2: Complete draft as 'payment pending'
+    const completeRes = await shopify.post(`/draft_orders/${draftOrder.id}/complete.json`, {
+      payment_pending: true
+    });
+
+    console.log('✅ Order created and marked as payment pending:');
+    console.log(completeRes.data);
+  } catch (error) {
+    console.error('❌ Error:', error.response?.data || error.message);
   }
-});
+}
 
-app.get("/", (req, res) => {
-  res.send("Shopify Order API is running");
-});
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`API running on port ${PORT}`);
-});
+// Run the function
+createAndCompleteDraftOrder();
